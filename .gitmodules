@@ -1,0 +1,3 @@
+[submodule "submodules/word2vec"]
+	path = submodules/word2vec
+	url = https://github.com/dav/word2vec
