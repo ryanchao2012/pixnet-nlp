@@ -1,0 +1,7 @@
+# pv 2016-hackathon-qa-tokenized.jsonl | jq -r '.content[]|.zh_seg|"{{NULL}} {{NULL}} {{NULL}} {{NULL}} \(.) {{NULL}} {{NULL}} {{NULL}} {{NULL}}"' >> tokenized-zh-seg.txt
+# pv 2016-hackathon-qa-tokenized-50000+.jsonl | jq -r '.content[]|.zh_seg|"{{NULL}} {{NULL}} {{NULL}} {{NULL}} \(.) {{NULL}} {{NULL}} {{NULL}} {{NULL}}"' >> tokenized-zh-seg.txt
+# pv 2016-hackathon-qa-tokenized-80144+.jsonl | jq -r '.content[]|.zh_seg|"{{NULL}} {{NULL}} {{NULL}} {{NULL}} \(.) {{NULL}} {{NULL}} {{NULL}} {{NULL}}"' >> tokenized-zh-seg.txt
+
+pv 2016-hackathon-qa-tokenized.jsonl | jq -r '.content[]|.zh_seg' >> tokenized-zh-seg.txt
+pv 2016-hackathon-qa-tokenized-50000+.jsonl | jq -r '.content[]|.zh_seg' >> tokenized-zh-seg.txt
+pv 2016-hackathon-qa-tokenized-80144+.jsonl | jq -r '.content[]|.zh_seg' >> tokenized-zh-seg.txt
