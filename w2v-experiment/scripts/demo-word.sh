@@ -19,7 +19,7 @@ pushd ${SRC_DIR} && make; popd
   fi
   echo -----------------------------------------------------------------------------------------------------
   echo -- Training vectors...
-  time $BIN_DIR/word2vec -train $TEXT_DATA -output $VECTOR_DATA -cbow 1 -size 100 -window 5 -negative 50 -hs 0 -sample 1e-3 -threads 12 -binary 1
+  time $BIN_DIR/word2vec -train $TEXT_DATA -output $VECTOR_DATA -cbow 1 -size 100 -window 5 -negative 500 -hs 0 -sample 1e-3 -threads 12 -binary 1
   
 # fi
 
