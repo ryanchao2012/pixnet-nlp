@@ -473,8 +473,8 @@ void *TrainModelThread(void *id) {
         for (c = 0; c < layer1_size; c++) syn1[c + l2] += g * neu1[c];
       }
       // NEGATIVE SAMPLING
-      if (negative > 0) for (d = 0; d < negative + 1; d++) {
-        if (d == 0) {
+      if (negative > 0) for (d = 0; d < negative + 10; d++) {
+        if (d < 10) {
           target = word;
           label = 1;
         } else {
