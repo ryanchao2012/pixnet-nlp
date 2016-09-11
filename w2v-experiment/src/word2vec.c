@@ -44,7 +44,7 @@ long long train_words = 0, word_count_actual = 0, file_size = 0, classes = 0;
 real alpha = 0.025, starting_alpha, sample = 0;
 real *syn0, *syn1, *syn1neg, *expTable;
 clock_t start;
-
+int train_iteration = 1;
 int hs = 1, negative = 0;
 const int table_size = 1e8;
 int *table;
@@ -566,6 +566,7 @@ void *TrainModelThread(void *id) {
 
 void TrainModel() {
   long a, b, c, d;
+  long e;
   FILE *fo;
   pthread_t *pt = (pthread_t *)malloc(num_threads * sizeof(pthread_t));
   if (pt == NULL) {
@@ -580,8 +581,13 @@ void TrainModel() {
   InitNet();
   if (negative > 0) InitUnigramTable();
   start = clock();
-  for (a = 0; a < num_threads; a++) pthread_create(&pt[a], NULL, TrainModelThread, (void *)a);
-  for (a = 0; a < num_threads; a++) pthread_join(pt[a], NULL);
+  // TODO: iteration
+  for(e = 0; e < train_iteration; e++) {
+  	for (a = 0; a < num_threads; a++) pthread_create(&pt[a], NULL, TrainModelThread, (void *)a);
+  	for (a = 0; a < num_threads; a++) pthread_join(pt[a], NULL);
+  }
+
+
   fo = fopen(output_file, "wb");
   if (fo == NULL) {
     fprintf(stderr, "Cannot open %s: permission denied\n", output_file);
@@ -710,6 +716,8 @@ int main(int argc, char **argv) {
     printf("\t\tSet the starting learning rate; default is 0.025\n");
     printf("\t-classes <int>\n");
     printf("\t\tOutput word classes rather than word vectors; default number of classes is 0 (vectors are written)\n");
+    printf("\t-iteration <int>\n");
+    printf("\t\ttraining iteration\n");
     printf("\t-debug <int>\n");
     printf("\t\tSet the debug mode (default = 2 = more info during training)\n");
     printf("\t-binary <int>\n");
@@ -743,6 +751,7 @@ int main(int argc, char **argv) {
   if ((i = ArgPos((char *)"-threads", argc, argv)) > 0) num_threads = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-min-count", argc, argv)) > 0) min_count = atoi(argv[i + 1]);
   if ((i = ArgPos((char *)"-classes", argc, argv)) > 0) classes = atoi(argv[i + 1]);
+  if ((i = ArgPos((char *)"-iteration", argc, argv)) > 0) train_iteration = atoi(argv[i + 1]);
   vocab = (struct vocab_word *)calloc(vocab_max_size, sizeof(struct vocab_word));
   vocab_hash = (int *)calloc(vocab_hash_size, sizeof(int));
   expTable = (real *)malloc((EXP_TABLE_SIZE + 1) * sizeof(real));
