@@ -18,4 +18,4 @@ fi
 
 echo -----------------------------------------------------------------------------------------------------
 echo -- Creating phrases...
-time $BIN_DIR/word2phrase -train $TEXT_DATA -output $PHRASES_DATA -threshold 300 -debug 2
+time $BIN_DIR/word2phrase -train $TEXT_DATA -output $PHRASES_DATA -threshold 500 -debug 2
