@@ -1,3 +1,4 @@
 data/
+legacy/
 .ipynb_checkpoints/
 w2v-experiment/model/
