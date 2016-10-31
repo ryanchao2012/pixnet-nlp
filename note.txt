@@ -1,0 +1,43 @@
+data:
+	1. pixnet原始資料(for trainging)
+	2. 賽前samples(for validation)
+	3. 賽後題庫(for testing)
+
+
+models:
+	1  國父斷詞器 vs jieba斷詞器(詞性/count mapping)
+		
+	2. lm models
+	3. w2v models
+	4. retrieval engine(?)
+
+others:
+	1. slackbot
+	2. celery/gevent
+
+
+for i in $( seq 354946 354947 ) ; do command echo -en $i "\t" ; http --form POST http://subhd.com/ajax/down_ajax sub_id=$i | jq -r '.url' | xargs curl -O ; sleep 5 ; done
+
+
+Data Source:
+射手網(偽)
+
+
+Preprocessing:
+斷詞，詞性測試
+
+
+Model Architecture:
+encode 詞向量: 
+	word2vec ?
+	LSTM(RNN) 文法資訊如何加到model
+
+
+Metrics:
+word2vec
+
+
+
+
+
+
