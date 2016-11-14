@@ -37,6 +37,19 @@ Metrics:
 word2vec
 
 
+question sample --> retrieval engine --> ANS (OK)
+									 --> word2vec(2,3) --> ANS
+				--> word2vec(1) --> ANS(??)
+				--> language model --> ANS					 
+				--> phrase tokenizer --> language model --> ANS
+									 --> word2vec --> ANS
+				--> jieba tokenizer --> word2vec --> ANS (OK)
+								    --> language model --> ANS
+
+
+
+
+
 
 
 
