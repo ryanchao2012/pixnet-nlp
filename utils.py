@@ -1,8 +1,10 @@
 import jieba
 import numpy as np
 import string
+import random
 import subprocess
 import re
+import time
 # jieba.set_dictionary('data/DICT_CK+jieba_lower')
 # jieba.add_word('龐燮傍謝', freq=10, tag='xx')
 ANS = ['a', 'b', 'c', 'd', 'e']
@@ -43,12 +45,12 @@ class TokenQuestion(Question):
 
         self.tokenizer = tokenizer
         self.tokenize()
-        self.build_senlist()
 
 
     def tokenize(self):
+        context = self.context.strip().lower()
         if self.tokenizer == 'jieba':
-            context = self.context.strip().lower().replace('︽⊙＿⊙︽', '龐燮傍謝')
+            context = context.replace('︽⊙＿⊙︽', '龐燮傍謝')
             wlist = list(jieba.cut(context))
             qidx = []
             for i, w in enumerate(wlist):
@@ -59,20 +61,14 @@ class TokenQuestion(Question):
             self.qidx = qidx
         elif self.tokenizer == 'guofoo':
             print('[tokenizer]oh... you forgot something')
-            pass
-
-
-    def build_senlist(self, window = WINDOW):
-        temp = self.wlist[:]
-        est_sen = []
-        sen_len = len(self.wlist)
-        for i in self.qidx:
-            head = max(i - window, 0)
-            tail = min(i + window, sen_len)
-            est_sen.append(self.wlist[head : i] + self.wlist[i + 1 : tail])
-        self.w2v_senlist = est_sen
-        # TODO:
-
+        elif self.tokenizer == 'uni':
+            context = context.replace('︽⊙＿⊙︽', '*')
+            wlist = re.sub(r'\s+',' ', re.sub(r'([\u4E00-\u9FFF\*])', r' \1 ', context)).strip().split(' ')
+            qidx = []
+            for i, w in enumerate(wlist):
+                if w == '*': qidx.append(i)
+            self.wlist = wlist
+            self.qidx = qidx
 
 
 class Solver(object):
@@ -89,14 +85,45 @@ class Solver(object):
         raise NotImplementedError( "Subclass should have implemented solve method" )
 
 
+class KenLMSolver(Solver):
+    def __init__(self, path, name):
+        import kenlm
+        self.model = kenlm.Model(path + name)
+
+        super().__init__()
+
+
+    def solve(self, tokenized_question):
+        self.prediction = Solver.UNSOLVED
+        q = tokenized_question
+        num_opt = len(q.options)
+
+        if q.tokenizer == 'uni':
+            est_sen = [' '.join(q.wlist).replace('*', re.sub(r'\s+',' ', re.sub(r'([\u4E00-\u9FFF\*])', r' \1 ', x)).strip()) for x in q.options]
+            score = [self.model.score(s) for s in est_sen]
+            self.prediction = string.ascii_lowercase[score.index(max(score))]
+            self.options_prob = {x: y for x, y in zip(string.ascii_lowercase[:len(q.options)], score)}
+
+        elif q.tokenizer == 'jieba':
+            est_sen = [' '.join(q.wlist).replace('*', ' '.join(list(jieba.cut(x)))) for x in q.options]
+            score = [self.model.score(s) for s in est_sen]
+            self.prediction = string.ascii_lowercase[score.index(max(score))]
+            self.options_prob = {x: y for x, y in zip(string.ascii_lowercase[:len(q.options)], score)}
+
+        elif q.tokenizer == 'guofoo':
+            pass
 
 class Word2VecSolver(Solver):
 
     def __init__(self, path, prefix):
         import gensim
         from smart_open import smart_open
+        self.prefix = prefix
 
-        self.model = gensim.models.Word2Vec.load_word2vec_format(path + prefix + '-syn0.bin', binary = True)
+        # unicode error
+        # self.model = gensim.models.Word2Vec.load_word2vec_format(path + prefix + '-syn0.bin', binary = True)
+        
+        self.model = gensim.models.Word2Vec.load_word2vec_format(path + prefix + '-syn0.bin', binary = True, unicode_errors = 'ignore')
         self.vocab_size, self.vector_size = self.model.syn0.shape
         syn1neg = np.zeros((self.vocab_size, self.vector_size), dtype = np.float32)
 
@@ -109,31 +136,71 @@ class Word2VecSolver(Solver):
 
         super().__init__()
 
-    def solve(self, tokenized_question, key = None):
+    def build_senlist(self, tokenized_question, window = WINDOW):
+        q = tokenized_question
+        temp = q.wlist[:]
+        est_sen = []
+        sen_len = len(q.wlist)
+        for i in q.qidx:
+            head = max(i - window, 0)
+            tail = min(i + window, sen_len)
+            est_sen.append(q.wlist[head : i] + q.wlist[i + 1 : tail])
+        return est_sen
+
+    def ngram_option(self, options, uni_gram = False):
+        ret = []
+        if uni_gram:
+            for opt in options:
+                ret.append(re.sub(r'\s+',' ', re.sub(r'([\u4E00-\u9FFF])', r' \1 ', opt)).strip().split(' ')) 
+        else:
+            for opt in options:
+                ret.append([opt]) 
+        return ret
+
+    def solve(self, tokenized_question, uni_gram = False, key = None):
         q = tokenized_question
         num_opt = len(q.options)
+
         if not key:
-            num_sen = float(len(q.w2v_senlist))
+            w2v_senlist = self.build_senlist(q)
+            gram_option = self.ngram_option(q.options, uni_gram)
+            num_sen = float(len(w2v_senlist))
             if num_sen > 0.:
                 option_vec_idx = []
-                for w in q.options:
-                    if w in self.model: option_vec_idx.append(self.model.vocab[w].index)
-                    else: option_vec_idx.append(-1)
+                for opt in gram_option:
+                    li = []
+                    for w in opt: 
+                        if w in self.model: li.append(self.model.vocab[w].index)
+                        else: li.append(-1)
+                    option_vec_idx.append(li)
                 score = [0.] * num_opt
-                for wlist in q.w2v_senlist:
+
+                
+                for wlist in w2v_senlist:
                     arr = np.zeros(self.vector_size)
                     for w in wlist:
                         if w in self.model and w != u'*': arr += self.model[w]
 
-                    for i in range(num_opt):
-                        if option_vec_idx[i] >= 0: 
-                            score[i] += np.dot(normalize_vec(arr), normalize_vec(self.syn1neg[option_vec_idx[i]]))
-                score = [s/num_sen for s in score]
-                self.options_prob = {x: y for x, y in zip(string.ascii_lowercase[:num_opt], score)}
+                    for i, opt_i in enumerate(option_vec_idx):
+                        s, k = 0.0, 0.0
+                        for j, w in enumerate(opt_i):
+                            if w >= 0:
+                                temp = arr.copy()
+                                others = [x for _i, x in enumerate(opt_i) if _i != j]
+                                for v in others:
+                                    if v >= 0: 
+                                        temp += self.model.syn0[v]
+                                s += np.dot(normalize_vec(temp), normalize_vec(self.syn1neg[w]))
+                                k += 1
 
+                        score[i] += float(s) / float(max(k, 1))
+
+                score = [s/num_sen for s in score]                
+                self.options_prob = {x: y for x, y in zip(string.ascii_lowercase[:num_opt], score)}
                 self.prediction = string.ascii_lowercase[score.index(max(score))]
             else:
                 self.prediction = Solver.UNSOLVED
+
 
         else:
             if key in self.model:
@@ -197,3 +264,87 @@ class RetrievalSolver(Solver):
 
         return self.prediction
 
+
+
+import html
+from urllib.parse import quote
+from urllib import request
+class CrawlerSolver(Solver):
+    def __init__(self, max_query_len = 10, query_num = 1):
+        super().__init__()
+        self.max_query_len = max_query_len
+        self.query_num = query_num
+
+    def crawl(self, query):
+        raw_html = self.google_crawl(query).lower()
+        clean_html = self.clean_html(raw_html)
+        return clean_html
+
+    def fast_search(self):
+        html_pool = ''
+        for q in self.rand_query:
+            html_pool += self.crawl(q)
+            time.sleep(2)
+
+        return html_pool
+        # for x in self.anslist:
+        #     if html_pool.find(x) > 0:
+        #         return (self.anslist.index(x), x)
+
+    def google_crawl(self, query):
+        link = "https://www.google.com/search?q=" + quote(query)  + '&ie=utf8&oe=utf8' # + '&lr=lang_zh-TW'
+        req = request.Request(link, headers = {'User-Agent' : "Chrome Browser"})
+        raw = html.unescape(request.urlopen(req).read().decode('utf-8'))
+        return raw
+    
+    def clean_html(self, raw_html):
+        clean_html = re.sub(re.compile(r'(<br?>)|(</br?>)|\n|\r|\s'), '', raw_html)
+        return clean_html
+
+    def solve(self, tokenized_question):
+        q = tokenized_question
+        num_opt = len(q.options)
+        self.set_rand_query(tokenized_question)
+        html_pool = self.fast_search()
+
+        self.prediction = Solver.UNKNOWN
+        if html_pool and len(html_pool) > 0:
+            for i in range(num_opt):
+                if q.options[i] in html_pool:
+                    self.prediction = string.ascii_lowercase[i]
+                    self.options_prob = {x: 0 for x in string.ascii_lowercase[:num_opt]}
+                    self.options_prob[self.prediction] = 1
+                    break
+        return self.prediction
+
+    
+    def set_rand_query(self, tokenized_question):
+        q = tokenized_question
+        self.rand_query = []
+        wlen = len(q.wlist)
+        wlist = q.wlist
+        qidx = q.qidx
+        if len(q.qidx) <= 0:
+            return
+        for i in range(self.query_num):
+            iq = random.choice(qidx)
+            if iq > 0:
+                ihead = random.choice(range(0, iq))
+                if (iq - ihead) > self.max_query_len: 
+                    ihead = iq - self.max_query_len
+                    if ihead < 0: raise Exception('[CrawlerSolver:set_rand_query]index must be positive')
+            else:
+                ihead = 0
+            
+            if iq + 1 < wlen:
+                iend = random.choice(range(iq + 1, wlen))
+                if (iend - iq) > self.max_query_len:
+                    iend = iq + self.max_query_len
+                    if iend >= wlen: raise IndexError
+            else:
+                iend = wlen - 1
+            self.rand_query.append(''.join(wlist[ihead : iend]))
+
+    # def print_rand_query(self):
+    #         for q in self.rand_query:
+    #             print(q)
