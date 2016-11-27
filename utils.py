@@ -1,8 +1,10 @@
 import jieba
 import numpy as np
 import string
+import random
 import subprocess
 import re
+import time
 # jieba.set_dictionary('data/DICT_CK+jieba_lower')
 # jieba.add_word('龐燮傍謝', freq=10, tag='xx')
 ANS = ['a', 'b', 'c', 'd', 'e']
@@ -83,20 +85,40 @@ class Solver(object):
         raise NotImplementedError( "Subclass should have implemented solve method" )
 
 
-class LanguageModelSolver(Solver):
-    def __init__(self, path, prefix):
+class KenLMSolver(Solver):
+    def __init__(self, path, name):
         import kenlm
-        # self.model = kenlm.Model('lm/test.arpa')
-        pass
+        self.model = kenlm.Model(path + name)
 
-    def solve:
-        pass
+        super().__init__()
+
+
+    def solve(self, tokenized_question):
+        self.prediction = Solver.UNSOLVED
+        q = tokenized_question
+        num_opt = len(q.options)
+
+        if q.tokenizer == 'uni':
+            est_sen = [' '.join(q.wlist).replace('*', re.sub(r'\s+',' ', re.sub(r'([\u4E00-\u9FFF\*])', r' \1 ', x)).strip()) for x in q.options]
+            score = [self.model.score(s) for s in est_sen]
+            self.prediction = string.ascii_lowercase[score.index(max(score))]
+            self.options_prob = {x: y for x, y in zip(string.ascii_lowercase[:len(q.options)], score)}
+
+        elif q.tokenizer == 'jieba':
+            est_sen = [' '.join(q.wlist).replace('*', ' '.join(list(jieba.cut(x)))) for x in q.options]
+            score = [self.model.score(s) for s in est_sen]
+            self.prediction = string.ascii_lowercase[score.index(max(score))]
+            self.options_prob = {x: y for x, y in zip(string.ascii_lowercase[:len(q.options)], score)}
+
+        elif q.tokenizer == 'guofoo':
+            pass
 
 class Word2VecSolver(Solver):
 
     def __init__(self, path, prefix):
         import gensim
         from smart_open import smart_open
+        self.prefix = prefix
 
         # unicode error
         # self.model = gensim.models.Word2Vec.load_word2vec_format(path + prefix + '-syn0.bin', binary = True)
@@ -262,8 +284,9 @@ class CrawlerSolver(Solver):
         html_pool = ''
         for q in self.rand_query:
             html_pool += self.crawl(q)
-            time.sleep(0.5)
-        # TODO 
+            time.sleep(2)
+
+        return html_pool
         # for x in self.anslist:
         #     if html_pool.find(x) > 0:
         #         return (self.anslist.index(x), x)
@@ -279,14 +302,30 @@ class CrawlerSolver(Solver):
         return clean_html
 
     def solve(self, tokenized_question):
+        q = tokenized_question
+        num_opt = len(q.options)
         self.set_rand_query(tokenized_question)
-        pass
+        html_pool = self.fast_search()
+
+        self.prediction = Solver.UNKNOWN
+        if html_pool and len(html_pool) > 0:
+            for i in range(num_opt):
+                if q.options[i] in html_pool:
+                    self.prediction = string.ascii_lowercase[i]
+                    self.options_prob = {x: 0 for x in string.ascii_lowercase[:num_opt]}
+                    self.options_prob[self.prediction] = 1
+                    break
+        return self.prediction
+
     
     def set_rand_query(self, tokenized_question):
+        q = tokenized_question
         self.rand_query = []
-        wlen = len(tokenized_question.wlist)
-        wlist = tokenized_question.wlist
-        qidx = tokenized_question.qidx
+        wlen = len(q.wlist)
+        wlist = q.wlist
+        qidx = q.qidx
+        if len(q.qidx) <= 0:
+            return
         for i in range(self.query_num):
             iq = random.choice(qidx)
             if iq > 0:

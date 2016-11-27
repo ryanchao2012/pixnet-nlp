@@ -1,6 +1,9 @@
 data/
 legacy/
 .ipynb_checkpoints/
-w2v-experiment/model/
+model/
+irstlm-5.80.08/
+kenlm/
+nohup.out
 __pycache__/
 
