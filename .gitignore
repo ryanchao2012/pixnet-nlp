@@ -1,4 +1,5 @@
 data/
+bin/
 legacy/
 .ipynb_checkpoints/
 model/
