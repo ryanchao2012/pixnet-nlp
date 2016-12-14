@@ -130,7 +130,10 @@ class KenLMSolver(Solver):
             self.options_prob = {x: y for x, y in zip(string.ascii_lowercase[:len(q.options)], score)}
 
         elif q.tokenizer == 'guofoo':
-            pass
+            est_sen = [' '.join(q.wlist).replace('*', re.sub(r'\s+',' ', x).strip()) for x in q.options]
+            score = [self.model.score(s) for s in est_sen]
+            self.prediction = string.ascii_lowercase[score.index(max(score))]
+            self.options_prob = {x: y for x, y in zip(string.ascii_lowercase[:len(q.options)], score)}
 
 class Word2VecSolver(Solver):
 
