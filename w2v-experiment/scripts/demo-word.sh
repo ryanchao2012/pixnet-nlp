@@ -5,9 +5,9 @@ BIN_DIR=../bin
 SRC_DIR=../src
 OUT_DIR=../model/content-category 
 
-VOCAB_FILE=$DATA_DIR/jb-makeup-vocab.jsonl
-TEXT_DATA=$DATA_DIR/makeup-phrase.txt
-VECTOR_DATA=$OUT_DIR/jb-makeup-cbow-syn0.bin
+VOCAB_FILE=$DATA_DIR/jb-global_travel-vocab.jsonl
+TEXT_DATA=$DATA_DIR/global_travel-phrase.txt
+VECTOR_DATA=$OUT_DIR/jb-global_travel-cbow-syn0.bin
 
 pushd ${SRC_DIR} && make; popd
 
