@@ -608,9 +608,9 @@ void TrainModel() {
       else for (b = 0; b < layer1_size; b++) fprintf(fo, "%lf ", syn0[a * layer1_size + b]);
       fprintf(fo, "\n");
     }
-    FILE *fo2 = fopen("../model/syn1neg.bin", "wb");
+    FILE *fo2 = fopen("../model/syn1neg.bin", "wb");  // 
     if (fo2 == NULL) {
-      fprintf(stderr, "Cannot open %s: permission denied\n", "syn1neg.bin");
+      fprintf(stderr, "Cannot open %s: permission denied\n", "syn1neg.bin"); //
       exit(1);
     }
     printf("\n%s\n", "Save layer2");
@@ -618,8 +618,8 @@ void TrainModel() {
     for (a = 0; a < vocab_size; a++) {
       
       for (b = 0; b < layer1_size; b++) {
-        // if(b == layer1_size - 1) printf("%ld:%.3f, ", a, syn1neg[a * layer1_size + b]);
-        fwrite(&syn1neg[a * layer1_size + b], sizeof(real), 1, fo2);
+        // if(b == layer1_size - 1) printf("%ld:%.3f, ", a, syn1[a * layer1_size + b]);
+        fwrite(&syn1neg[a * layer1_size + b], sizeof(real), 1, fo2); //
       }
     }
     fprintf(fo2, "\n");

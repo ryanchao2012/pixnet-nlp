@@ -1,13 +1,13 @@
 #!/bin/bash
 
-DATA_DIR=../../data
+DATA_DIR=../../data/content-category 
 BIN_DIR=../bin
 SRC_DIR=../src
-OUT_DIR=../model
+# OUT_DIR=../model
 
 
-TEXT_DATA=$DATA_DIR/jb-zh.txt
-PHRASES_DATA=$DATA_DIR/jb-zh-phrase.txt
+TEXT_DATA=$DATA_DIR/makeup.txt
+PHRASES_DATA=$DATA_DIR/makeup-phrase.txt
 
 pushd ${SRC_DIR} && make; popd
 
