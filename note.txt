@@ -47,7 +47,15 @@ question sample --> retrieval engine --> ANS (OK)
 								    --> language model --> ANS
 
 
-
+from sklearn.feature_extraction.text import CountVectorizer
+vectorizer = CountVectorizer(min_df=1, analyzer=feature.build_features, binary=True)
+vectorizer.fit(titles_subcategorys_small['title'].values)
+X = vectorizer.transform(titles_subcategorys_small['title'].values)
+from sklearn.linear_model import LogisticRegression
+# clf = LogisticRegression(penalty='l2', solver='liblinear', C=1.2, verbose=0, n_jobs=-1, warm_start=False, multi_class='ovr', dual=True)
+clf = LogisticRegression(penalty='l2', solver='newton-cg', C=1.2, verbose=0, n_jobs=-1, warm_start=True, multi_class='ovr', dual=False)
+clf.fit(X, y)
+print(clf.score(X_test, y_test))
 
 
 

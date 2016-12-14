@@ -608,6 +608,7 @@ void TrainModel() {
       else for (b = 0; b < layer1_size; b++) fprintf(fo, "%lf ", syn0[a * layer1_size + b]);
       fprintf(fo, "\n");
     }
+
     FILE *fo2 = fopen("../model/syn1neg.bin", "wb");  // 
     if (fo2 == NULL) {
       fprintf(stderr, "Cannot open %s: permission denied\n", "syn1neg.bin"); //
